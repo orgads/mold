@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# MIPS DSOs have no PLT.
+[[ $MACHINE = mips* ]] && skip
+
 cat <<EOF | $CC -c -o $t/a.o -xc - -fPIC
 void bar();
 void foo() { bar(); }

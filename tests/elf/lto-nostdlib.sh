@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# The entry point of MIPS is __start.
+[[ $MACHINE = mips* ]] && skip
+
 test_cflags -flto || skip
 
 cat <<EOF | $CC -flto -c -o $t/a.o -xc -

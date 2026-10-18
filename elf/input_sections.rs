@@ -330,8 +330,9 @@ impl<E: Target> InputSection<E> {
         // because addends are in relocations.
         //
         // SH-4 stores addends in sections despite being RELA, which is a
-        // special (and buggy) case.
-        if !E::IS_RELA || E::FAMILY == Family::Sh4 {
+        // special (and buggy) case. MIPS O32 object files are REL, which
+        // we convert to RELA when reading relocations.
+        if !E::IS_RELA || E::FAMILY == Family::Sh4 || (E::FAMILY == Family::Mips && !E::IS_64) {
             isec.uncompress(file, name, contents);
         }
         isec

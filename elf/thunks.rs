@@ -77,6 +77,7 @@ fn batch_size<E: Target>() -> u64 {
         Family::Arm64 => 32 * 1024 * 1024,
         Family::Arm32 => 8 * 1024 * 1024,
         Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 => 16 * 1024 * 1024,
+        Family::Mips => 32 * 1024 * 1024,
         _ => unreachable!("{} has no range extension thunks", E::NAME),
     }
 }
@@ -101,6 +102,11 @@ fn requires_thunk<E: Target>(
     first_pass: bool,
 ) -> bool {
     if !rel.is_func_call::<E>() {
+        return false;
+    }
+
+    // MIPS calls through the GOT except with J and JAL.
+    if E::IS_MIPS && rel.r_type() != R_MIPS_26 {
         return false;
     }
 
@@ -160,7 +166,7 @@ fn executable_sections<E: Target>(ctx: &Context<E>) -> Vec<OutputSectionId> {
 /// redirect_section_relocations() creates for branches via the same section
 /// symbol share its index, so their IDs, which are assigned in file order,
 /// break the tie.
-fn sort_key<E: Target>(ctx: &Context<E>, id: SymbolId) -> (u32, u32, SymbolId) {
+pub(crate) fn sort_key<E: Target>(ctx: &Context<E>, id: SymbolId) -> (u32, u32, SymbolId) {
     let sym = &ctx.symbols[id];
     (sym.file().map_or(0, |f| ctx.file(f).priority), sym.sym_idx(), id)
 }

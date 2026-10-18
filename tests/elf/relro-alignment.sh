@@ -9,6 +9,7 @@
 [ $MACHINE = sh4aeb ] && skip
 [ $MACHINE = m68k ] && skip
 [ $MACHINE = riscv32 ] && skip
+[[ $MACHINE = mips || $MACHINE = mipsel || $MACHINE = mipsn32* ]] && skip
 
 cat <<EOF | $CC -c -xc -o $t/a.o -
 #include <stdio.h>

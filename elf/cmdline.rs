@@ -237,8 +237,8 @@ Options:
     -z notext
     -z textoff
 
-mold: supported targets: elf32-i386 elf64-x86-64 elf32-littlearm elf64-littleaarch64 elf64-bigaarch64 elf32-littleriscv elf32-bigriscv elf64-littleriscv elf64-bigriscv elf32-powerpc elf64-powerpc elf64-powerpc elf64-powerpcle elf64-s390 elf64-sparc elf32-m68k elf32-sh-linux elf64-loongarch elf32-loongarch
-mold: supported emulations: elf_i386 elf_x86_64 armelf_linux_eabi aarch64elf aarch64linux aarch64elfb aarch64linuxb elf32lriscv elf32briscv elf64lriscv elf64briscv elf32ppc elf32ppclinux elf64ppc elf64lppc elf64_s390 elf64_sparc m68kelf shlelf_linux shelf_linux elf64loongarch elf32loongarch";
+mold: supported targets: elf32-i386 elf64-x86-64 elf32-littlearm elf64-littleaarch64 elf64-bigaarch64 elf32-littleriscv elf32-bigriscv elf64-littleriscv elf64-bigriscv elf32-powerpc elf64-powerpc elf64-powerpc elf64-powerpcle elf64-s390 elf64-sparc elf32-m68k elf32-sh-linux elf64-loongarch elf32-loongarch elf64-tradbigmips elf64-tradlittlemips elf32-tradbigmips elf32-tradlittlemips elf32-ntradbigmips elf32-ntradlittlemips
+mold: supported emulations: elf_i386 elf_x86_64 armelf_linux_eabi aarch64elf aarch64linux aarch64elfb aarch64linuxb elf32lriscv elf32briscv elf64lriscv elf64briscv elf32ppc elf32ppclinux elf64ppc elf64lppc elf64_s390 elf64_sparc m68kelf shlelf_linux shelf_linux elf64loongarch elf32loongarch elf64btsmip elf64ltsmip elf32btsmip elf32ltsmip elf32btsmipn32 elf32ltsmipn32";
 
 pub static VERSION: LazyLock<String> = LazyLock::new(|| {
     let version = env!("CARGO_PKG_VERSION");
@@ -1167,6 +1167,11 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
     // we write addends to relocated places.
     a.apply_dynamic_relocs = !matches!(target.family, Family::Sparc64 | Family::RiscV);
 
+    // The MIPS psABI names its entry point __start.
+    if target.family == Family::Mips {
+        a.entry = b"__start".to_vec();
+    }
+
     let mut cursor = ArgCursor { args: raw_cmdline, index: 1 };
     let mut arg = "";
     let mut raw_arg = OsStr::new("");
@@ -1243,7 +1248,8 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
                  aarch64linux\n   aarch64elfb\n   aarch64linuxb\n   armelf_linux_eabi\n   elf64lriscv\n   \
                  elf64briscv\n   elf32lriscv\n   elf32briscv\n   elf32ppc\n   elf64ppc\n   elf64lppc\n   \
                  elf64_s390\n   elf64_sparc\n   m68kelf\n   shlelf_linux\n   shelf_linux\n   \
-                 elf64loongarch\n   elf32loongarch",
+                 elf64loongarch\n   elf32loongarch\n   elf64btsmip\n   elf64ltsmip\n   \
+                 elf32btsmip\n   elf32ltsmip\n   elf32btsmipn32\n   elf32ltsmipn32",
                 *VERSION
             );
             version_shown = true;
@@ -1840,6 +1846,18 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
             || read_arg!("max-cache-size", true)
         {
             // Ignored for compatibility.
+        } else if cursor.read_flag("mips32")
+            || cursor.read_flag("mips32r2")
+            || cursor.read_flag("mips32r3")
+            || cursor.read_flag("mips32r5")
+            || cursor.read_flag("mips32r6")
+            || cursor.read_flag("mips64")
+            || cursor.read_flag("mips64r2")
+            || cursor.read_flag("mips64r3")
+            || cursor.read_flag("mips64r5")
+            || cursor.read_flag("mips64r6")
+        {
+            // MIPS ISA levels, which GCC passes to the linker. Ignored.
         } else if read_arg!("m") {
             match emulation_to_target(arg) {
                 Some(name) => a.emulation = name,
@@ -2038,6 +2056,9 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
     }
     if a.image_base % a.page_size != 0 {
         fatal!("-image-base must be a multiple of -max-page-size");
+    }
+    if target.family == Family::Mips && a.pack_dyn_relocs_relr {
+        fatal!("-z pack-relative-relocs is not supported on MIPS");
     }
     if a.emulation == "arm32be" && !be8 && !a.relocatable {
         fatal!("--be32 is not supported");

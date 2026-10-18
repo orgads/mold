@@ -124,6 +124,7 @@ pub const PT_GNU_SFRAME: u32 = 0x6474e554;
 pub const PT_OPENBSD_RANDOMIZE: u32 = 0x65a3dbe6;
 pub const PT_ARM_EXIDX: u32 = 0x70000001;
 pub const PT_RISCV_ATTRIBUTES: u32 = 0x70000003;
+pub const PT_MIPS_ABIFLAGS: u32 = 0x70000003;
 
 pub const PF_NONE: u32 = 0;
 pub const PF_X: u32 = 1;
@@ -156,6 +157,7 @@ pub const EM_X86_64: u32 = 62;
 pub const EM_AARCH64: u32 = 183;
 pub const EM_RISCV: u32 = 243;
 pub const EM_LOONGARCH: u32 = 258;
+pub const EM_MIPS: u32 = 8;
 
 pub const EI_CLASS: u32 = 4;
 pub const EI_DATA: u32 = 5;
@@ -223,6 +225,14 @@ pub const DT_RISCV_VARIANT_CC: u32 = 0x70000001;
 pub const DT_AARCH64_BTI_PLT: u32 = 0x70000001;
 pub const DT_AARCH64_PAC_PLT: u32 = 0x70000003;
 pub const DT_AARCH64_VARIANT_PCS: u32 = 0x70000005;
+pub const DT_MIPS_RLD_VERSION: u32 = 0x70000001;
+pub const DT_MIPS_FLAGS: u32 = 0x70000005;
+pub const DT_MIPS_BASE_ADDRESS: u32 = 0x70000006;
+pub const DT_MIPS_LOCAL_GOTNO: u32 = 0x7000000a;
+pub const DT_MIPS_SYMTABNO: u32 = 0x70000011;
+pub const DT_MIPS_GOTSYM: u32 = 0x70000013;
+pub const DT_MIPS_PLTGOT: u32 = 0x70000032;
+pub const DT_MIPS_RLD_MAP_REL: u32 = 0x70000035;
 pub const DT_AUXILIARY: u32 = 0x7ffffffd;
 pub const DT_FILTER: u32 = 0x7fffffff;
 
@@ -302,6 +312,33 @@ pub const EF_SPARC_HAL_R1: u32 = 0x000400;
 pub const EF_SPARC_SUN_US3: u32 = 0x000800;
 
 pub const STO_RISCV_VARIANT_CC: u32 = 0x80;
+
+pub const SHT_MIPS_REGINFO: u32 = 0x70000006;
+pub const SHT_MIPS_OPTIONS: u32 = 0x7000000d;
+pub const SHT_MIPS_DWARF: u32 = 0x7000001e;
+pub const SHT_MIPS_ABIFLAGS: u32 = 0x7000002a;
+pub const SHF_MIPS_GPREL: u32 = 0x10000000;
+
+pub const EF_MIPS_NOREORDER: u32 = 0x00000001;
+pub const EF_MIPS_PIC: u32 = 0x00000002;
+pub const EF_MIPS_CPIC: u32 = 0x00000004;
+pub const EF_MIPS_ABI2: u32 = 0x00000020;
+pub const EF_MIPS_32BITMODE: u32 = 0x00000100;
+pub const EF_MIPS_FP64: u32 = 0x00000200;
+pub const EF_MIPS_NAN2008: u32 = 0x00000400;
+pub const EF_MIPS_ABI: u32 = 0x0000f000;
+pub const EF_MIPS_ABI_O32: u32 = 0x00001000;
+pub const EF_MIPS_MACH: u32 = 0x00ff0000;
+pub const EF_MIPS_ARCH_ASE: u32 = 0x0f000000;
+pub const EF_MIPS_ARCH: u32 = 0xf0000000;
+pub const EF_MIPS_ARCH_32R6: u32 = 0x90000000;
+pub const EF_MIPS_ARCH_64R6: u32 = 0xa0000000;
+pub const EF_MIPS_MICROMIPS: u32 = 0x02000000;
+pub const EF_MIPS_ARCH_ASE_M16: u32 = 0x04000000;
+
+pub const STO_MIPS_PLT: u32 = 0x8;
+
+pub const ODK_REGINFO: u8 = 1;
 
 pub const ELF_TAG_FILE: u32 = 1;
 pub const ELF_TAG_SECTION: u32 = 2;
@@ -1405,4 +1442,67 @@ define_relocations! {
     R_LARCH_TLS_LD_PCREL20_S2 = 124;
     R_LARCH_TLS_GD_PCREL20_S2 = 125;
     R_LARCH_TLS_DESC_PCREL20_S2 = 126;
+}
+
+define_relocations! {
+    mips_rel_to_string;
+    R_MIPS_NONE = 0;
+    R_MIPS_16 = 1;
+    R_MIPS_32 = 2;
+    R_MIPS_REL32 = 3;
+    R_MIPS_26 = 4;
+    R_MIPS_HI16 = 5;
+    R_MIPS_LO16 = 6;
+    R_MIPS_GPREL16 = 7;
+    R_MIPS_LITERAL = 8;
+    R_MIPS_GOT16 = 9;
+    R_MIPS_PC16 = 10;
+    R_MIPS_CALL16 = 11;
+    R_MIPS_GPREL32 = 12;
+    R_MIPS_SHIFT5 = 16;
+    R_MIPS_SHIFT6 = 17;
+    R_MIPS_64 = 18;
+    R_MIPS_GOT_DISP = 19;
+    R_MIPS_GOT_PAGE = 20;
+    R_MIPS_GOT_OFST = 21;
+    R_MIPS_GOT_HI16 = 22;
+    R_MIPS_GOT_LO16 = 23;
+    R_MIPS_SUB = 24;
+    R_MIPS_INSERT_A = 25;
+    R_MIPS_INSERT_B = 26;
+    R_MIPS_DELETE = 27;
+    R_MIPS_HIGHER = 28;
+    R_MIPS_HIGHEST = 29;
+    R_MIPS_CALL_HI16 = 30;
+    R_MIPS_CALL_LO16 = 31;
+    R_MIPS_SCN_DISP = 32;
+    R_MIPS_REL16 = 33;
+    R_MIPS_ADD_IMMEDIATE = 34;
+    R_MIPS_PJUMP = 35;
+    R_MIPS_RELGOT = 36;
+    R_MIPS_JALR = 37;
+    R_MIPS_TLS_DTPMOD32 = 38;
+    R_MIPS_TLS_DTPREL32 = 39;
+    R_MIPS_TLS_DTPMOD64 = 40;
+    R_MIPS_TLS_DTPREL64 = 41;
+    R_MIPS_TLS_GD = 42;
+    R_MIPS_TLS_LDM = 43;
+    R_MIPS_TLS_DTPREL_HI16 = 44;
+    R_MIPS_TLS_DTPREL_LO16 = 45;
+    R_MIPS_TLS_GOTTPREL = 46;
+    R_MIPS_TLS_TPREL32 = 47;
+    R_MIPS_TLS_TPREL64 = 48;
+    R_MIPS_TLS_TPREL_HI16 = 49;
+    R_MIPS_TLS_TPREL_LO16 = 50;
+    R_MIPS_GLOB_DAT = 51;
+    R_MIPS_PC21_S2 = 60;
+    R_MIPS_PC26_S2 = 61;
+    R_MIPS_PC18_S3 = 62;
+    R_MIPS_PC19_S2 = 63;
+    R_MIPS_PCHI16 = 64;
+    R_MIPS_PCLO16 = 65;
+    R_MIPS_COPY = 126;
+    R_MIPS_JUMP_SLOT = 127;
+    R_MIPS_PC32 = 248;
+    R_MIPS_EH = 249;
 }

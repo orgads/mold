@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# GCC for MIPS emits PIC code even with -fno-PIC, and Clang aligns the
+# .data of a DSO to 16 bytes.
+[[ $MACHINE = mips* ]] && skip
+
 [ $MACHINE = ppc64 ] && skip
 [ $MACHINE = ppc64le ] && skip
 [[ $MACHINE = loongarch* ]] && skip

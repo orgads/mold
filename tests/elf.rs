@@ -36,6 +36,10 @@ const TARGETS: &[TargetSpec] = &[
     TargetSpec { machine: "sh4", triple: "sh4-linux-gnu", qemu: "qemu-sh4" },
     TargetSpec { machine: "sh4aeb", triple: "sh4aeb-linux-gnu", qemu: "qemu-sh4eb" },
     TargetSpec { machine: "m68k", triple: "m68k-linux-gnu", qemu: "qemu-m68k" },
+    TargetSpec { machine: "mips", triple: "mips-linux-gnu", qemu: "qemu-mips" },
+    TargetSpec { machine: "mipsel", triple: "mipsel-linux-gnu", qemu: "qemu-mipsel" },
+    TargetSpec { machine: "mips64", triple: "mips64-linux-gnuabi64", qemu: "qemu-mips64" },
+    TargetSpec { machine: "mips64el", triple: "mips64el-linux-gnuabi64", qemu: "qemu-mips64el" },
     TargetSpec {
         machine: "loongarch64",
         triple: "loongarch64-linux-gnu",
@@ -197,5 +201,7 @@ mod tests {
         assert_eq!(canonical_machine("armv7l"), "arm");
         assert_eq!(canonical_machine("aarch64"), "aarch64");
         assert_eq!(canonical_machine("powerpc64le"), "ppc64le");
+        assert_eq!(machine_from_triple("mipsel-linux-gnu"), "mipsel");
+        assert_eq!(machine_from_triple("mips64el-linux-gnuabi64"), "mips64el");
     }
 }

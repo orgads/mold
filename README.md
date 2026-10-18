@@ -15,7 +15,7 @@ is the default linker of many large open-source projects and is used
 internally by many companies.
 
 mold supports x86-64, i386, ARM 32/64, RISC-V 32/64, PowerPC 32/64, s390x,
-LoongArch 32/64, SPARC64, m68k, and SH-4.
+LoongArch 32/64, MIPS 32/64, SPARC64, m68k, and SH-4.
 
 ## Why does linking speed matter?
 

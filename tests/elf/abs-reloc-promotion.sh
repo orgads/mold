@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# GCC for MIPS emits PIC code even with -fno-PIC.
+[[ $MACHINE = mips* ]] && skip
+
 # GCC for PowerPC places foo1 and bar1 below in writable sections, so
 # there is no read-only reference to promote.
 [[ $MACHINE = ppc* ]] && skip

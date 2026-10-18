@@ -2,7 +2,7 @@
 . $(dirname $0)/common.inc
 
 case $MACHINE in
-i686|arm*|ppc|riscv32*|sh4*|m68k) skip ;;
+i686|arm*|ppc|riscv32*|sh4*|m68k|mips|mipsel|mipsn32*) skip ;;
 esac
 
 # An unresolved weak function resolves to address 0. If a program is linked

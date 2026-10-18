@@ -937,6 +937,9 @@ fn is_known_section_type<E: Target>(shdr: &ElfShdr<E>) -> bool {
         Family::X86_64 if ty == SHT_X86_64_UNWIND => true,
         Family::Arm32 if ty == SHT_ARM_EXIDX || ty == SHT_ARM_ATTRIBUTES => true,
         Family::RiscV if ty == SHT_RISCV_ATTRIBUTES => true,
+        Family::Mips => {
+            matches!(ty, SHT_MIPS_REGINFO | SHT_MIPS_OPTIONS | SHT_MIPS_ABIFLAGS | SHT_MIPS_DWARF)
+        }
         _ => false,
     }
 }
@@ -1707,9 +1710,16 @@ impl<E: Target> ObjectFile<E> {
                     // section because silently making the stack area executable
                     // is too dangerous. Tell our users about the difference if
                     // that matters.
+                    //
+                    // glibc for MIPS requests an executable stack for the
+                    // FPU emulator of old kernels, which modern kernels no
+                    // longer need, so we don't warn on MIPS.
                     if name == b".note.GNU-stack" && !args.relocatable {
                         if flags & SHF_EXECINSTR as u64 != 0 {
-                            if !args.z_execstack && !args.z_execstack_if_needed {
+                            if !args.z_execstack
+                                && !args.z_execstack_if_needed
+                                && E::FAMILY != Family::Mips
+                            {
                                 warn!(
                                     "{self}: this file may cause a segmentation fault because it requires an executable stack. See https://github.com/rui314/mold/tree/main/docs/execstack.md for more info."
                                 );
@@ -1846,7 +1856,9 @@ impl<E: Target> ObjectFile<E> {
         // Attach relocation sections to their target sections.
         for (i, shdr) in shdrs.iter().enumerate() {
             let sh_type = shdr.sh_type.get();
-            if sh_type != expected_reloc_type && sh_type != SHT_CREL {
+            // MIPS O32 object files use REL, which we convert to RELA.
+            let is_mips_rel = E::FAMILY == Family::Mips && !E::IS_64 && sh_type == SHT_REL;
+            if sh_type != expected_reloc_type && sh_type != SHT_CREL && !is_mips_rel {
                 continue;
             }
             let target = shdr.sh_info.get() as usize;
@@ -1854,7 +1866,22 @@ impl<E: Target> ObjectFile<E> {
                 continue;
             }
 
-            let has_relocs = if sh_type == SHT_CREL {
+            if is_mips_rel {
+                let rels = records_from_bytes(self.base.section_contents_from_shdr(shdr));
+                let contents = self.section(target).unwrap().contents();
+                let elf_syms = &self.base.elf_syms;
+                let decoded = crate::arch::mips::decode_rel::<E>(rels, contents, |i| {
+                    elf_syms.get(i as usize).is_none_or(|esym| esym.st_bind() == STB_LOCAL)
+                });
+                self.set_decoded_crel(i, decoded);
+            } else if E::FAMILY == Family::Mips && !E::IS_64 && sh_type == SHT_RELA {
+                let rels = rels_from_bytes::<E>(self.base.section_contents_from_shdr(shdr));
+                if let Some(merged) = crate::arch::mips::merge_n32_rels::<E>(self, rels) {
+                    self.set_decoded_crel(i, merged);
+                }
+            }
+
+            let has_relocs = if sh_type == SHT_CREL || is_mips_rel {
                 if let Some(Some(decoded)) = self.decoded_crel.get(i) {
                     !decoded.is_empty()
                 } else {

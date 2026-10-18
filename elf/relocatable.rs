@@ -138,8 +138,10 @@ fn create_comdat_group_sections<E: Target>(ctx: &mut Context<E>) {
             for j in file.group_members(sect_idx) {
                 let shdr = &file.base.shdrs[j as usize];
                 let sh_type = shdr.sh_type.get();
-                let is_reloc =
-                    sh_type == if E::IS_RELA { SHT_RELA } else { SHT_REL } || sh_type == SHT_CREL;
+                // MIPS O32 object files use REL, which we convert to RELA.
+                let is_reloc = sh_type == if E::IS_RELA { SHT_RELA } else { SHT_REL }
+                    || sh_type == SHT_CREL
+                    || (E::IS_MIPS && sh_type == SHT_REL);
                 let target = if is_reloc { shdr.sh_info.get() } else { j };
                 let Some(isec) = file.section(target as usize) else {
                     continue;

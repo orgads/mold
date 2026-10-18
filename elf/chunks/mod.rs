@@ -52,7 +52,7 @@ use std::num::NonZeroU32;
 use bstr::BStr;
 use mold_common::{error, warn};
 
-use crate::arch::Target;
+use crate::arch::{Family, Target};
 use crate::context::Context;
 use crate::elf::*;
 use crate::input_files::{FileId, SymtabBlock};
@@ -565,6 +565,13 @@ fn create_phdr<E: Target>(ctx: &Context<E>) -> Vec<ElfPhdr<E>> {
         define(&mut vec, PT_RISCV_ATTRIBUTES, PF_R, &osec.hdr.shdr);
     }
 
+    // Create a PT_MIPS_ABIFLAGS
+    if E::FAMILY == Family::Mips
+        && let Some(id) = ctx.find_chunk_by_name(b".MIPS.abiflags")
+    {
+        define(&mut vec, PT_MIPS_ABIFLAGS, PF_R, &ctx.chunk_header(id).shdr);
+    }
+
     // Create a PT_OPENBSD_RANDOMIZE
     for &id in &ctx.chunks {
         let hdr = ctx.chunk_header(id);
@@ -643,6 +650,11 @@ pub fn update_shdr<E: Target>(ctx: &mut Context<E>, id: ChunkId) {
         ChunkId::Output(id) => output_section::update_shdr(ctx, id),
         ChunkId::Phdr => update_phdr(ctx),
         ChunkId::Interp => interp::update_shdr(ctx),
+        ChunkId::Got => {
+            if E::FAMILY == Family::Mips {
+                crate::arch::mips::update_got_shdr(ctx);
+            }
+        }
         ChunkId::GotPlt => gotplt::update_shdr(ctx),
         ChunkId::RelPlt => relplt::update_shdr(ctx),
         ChunkId::RelDyn => reldyn::update_shdr(ctx),

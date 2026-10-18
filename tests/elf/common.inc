@@ -93,6 +93,9 @@ is_musl() {
 }
 
 supports_ifunc() {
+  # mold doesn't support IFUNC on MIPS.
+  [[ $MACHINE = mips* ]] && return 1
+
   ! is_musl &&
     echo 'void x() __attribute__((ifunc("y"))); void *y() { return 0; }' |
     $CC -c -o /dev/null -xc - >& /dev/null

@@ -181,7 +181,9 @@ pub fn tp_addr<E: Target>(phdr: &ElfPhdr<E>) -> u64 {
         // (32 KiB) off because there's a small implementation-defined piece of
         // data before the initial TLS block, and the runtime wants to access
         // it efficiently too.
-        Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 | Family::M68k => phdr.p_vaddr() + 0x7000,
+        Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 | Family::M68k | Family::Mips => {
+            phdr.p_vaddr() + 0x7000
+        }
         // RISC-V and LoongArch just use the beginning of the main executable's
         // TLS block as TP. Their load/store instructions usually take 12-bit
         // signed immediates, so the beginning of the TLS block ± 2 KiB is
@@ -201,7 +203,9 @@ pub fn dtp_addr<E: Target>(phdr: &ElfPhdr<E>) -> u64 {
         // immediates. That is, if the offset were right at the start of the
         // TLS block, half of the addressable space (negative immediates) would
         // be wasted.
-        Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 | Family::M68k => phdr.p_vaddr() + 0x8000,
+        Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 | Family::M68k | Family::Mips => {
+            phdr.p_vaddr() + 0x8000
+        }
         // On RISC-V, the bias is 0x800 as the load/store instructions in the
         // ISA usually have a 12-bit immediate.
         Family::RiscV => phdr.p_vaddr() + 0x800,
