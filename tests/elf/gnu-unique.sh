@@ -2,6 +2,7 @@
 . $(dirname $0)/common.inc
 
 command -v $GXX >& /dev/null || skip
+test_cxxflags -fno-gnu-unique || skip
 
 cat <<EOF | $GXX -o $t/a.o -c -std=c++17 -fno-gnu-unique -xc++ -
 inline int foo = 5;

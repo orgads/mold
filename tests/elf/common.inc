@@ -33,6 +33,9 @@ if [ -z "$TRIPLE" ]; then
   QEMU=
 else
   MACHINE=$(canonical_name $(echo $TRIPLE | sed 's/-.*//'))
+  case $TRIPLE in
+  mips64*-gnuabin32) MACHINE=${MACHINE/64/n32} ;;
+  esac
   TESTDIR=out/test/$MACHINE
   CC="${TEST_CC:-$TRIPLE-gcc}"
   CXX="${TEST_CXX:-$TRIPLE-g++}"
