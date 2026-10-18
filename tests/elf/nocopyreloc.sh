@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# GCC for MIPS emits PIC code even with -fno-PIC.
+[[ $MACHINE = mips* ]] && skip
+
 [ $MACHINE = i686 ] && skip
 [ $MACHINE = m68k ] && skip
 [ $MACHINE = ppc64 ] && skip

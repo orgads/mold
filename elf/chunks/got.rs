@@ -25,7 +25,9 @@ pub struct GotSection<E: Target> {
 impl<E: Target> GotSection<E> {
     pub fn new() -> Self {
         let mut hdr = ChunkHeader::<E>::new(".got", SHT_PROGBITS, (SHF_ALLOC | SHF_WRITE) as u64);
-        hdr.is_relro = true;
+        // MIPS's .got must be next to GP-relative small data, which is
+        // writable.
+        hdr.is_relro = !E::IS_MIPS;
         hdr.shdr.sh_addralign.set(E::WORD_SIZE as u64);
         // We always create a .got so that _GLOBAL_OFFSET_TABLE_ has
         // something to point to. s390x psABI defines GOT[1] and GOT[2]
@@ -246,6 +248,9 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut emit: impl FnMut(GotEntry)) {
 // on every layout iteration. The cases below must mirror the r_type
 // choices in for_each_entry.
 pub fn num_dynrels<E: Target>(ctx: &Context<E>) -> u64 {
+    if E::FAMILY == Family::Mips {
+        return crate::arch::mips::num_dynrels(ctx);
+    }
     let got = &ctx.got;
     let pic = ctx.args.pic;
 
@@ -282,7 +287,7 @@ pub fn num_dynrels<E: Target>(ctx: &Context<E>) -> u64 {
 }
 
 pub fn relr_offsets<E: Target>(ctx: &Context<E>) -> Vec<u64> {
-    if !ctx.args.pic {
+    if !ctx.args.pic || E::FAMILY == Family::Mips {
         return Vec::new();
     }
     ctx.got
@@ -296,6 +301,10 @@ pub fn relr_offsets<E: Target>(ctx: &Context<E>) -> Vec<u64> {
 }
 
 pub fn write_dynrels<E: Target>(ctx: &Context<E>, out: &mut [DynRel<E>]) {
+    if E::FAMILY == Family::Mips {
+        crate::arch::mips::write_dynrels(ctx, out);
+        return;
+    }
     let mut i = 0;
     for_each_entry(ctx, |ent| {
         if ent.r_type == R_NONE {
@@ -318,6 +327,10 @@ pub fn write_dynrels<E: Target>(ctx: &Context<E>, out: &mut [DynRel<E>]) {
 
 // Fill .got.
 pub fn copy_buf<E: Target>(ctx: &Context<E>, buf: &mut [u8]) {
+    if E::FAMILY == Family::Mips {
+        crate::arch::mips::copy_got(ctx, buf);
+        return;
+    }
     buf.fill(0);
     let w = word::<E>() as usize;
     let write =

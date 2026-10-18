@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+test_cflags -fpatchable-function-entry=1 || skip
+
 # -r preserves SHF_LINK_ORDER sections with their links.
 cat <<EOF | $CC -c -o $t/a.o -xc - -ffunction-sections -fpatchable-function-entry=1
 int foo() { return 3; }

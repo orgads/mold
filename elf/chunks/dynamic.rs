@@ -49,7 +49,13 @@ fn sym_addr_if_defined<E: Target>(ctx: &Context<E>, id: SymbolId) -> Option<u64>
     }
 }
 
-fn for_each_entry<E: Target>(ctx: &Context<E>, mut define: impl FnMut(u32, u64)) {
+fn for_each_entry<E: Target>(ctx: &Context<E>, mut define_entry: impl FnMut(u32, u64)) {
+    // The number of entries defined so far
+    let count = std::cell::Cell::new(0u64);
+    let mut define = |tag: u32, val: u64| {
+        count.set(count.get() + 1);
+        define_entry(tag, val);
+    };
     let dynstr = &ctx.dynstr;
     let plt = &ctx.plt;
     let (rel, relsz, relent) = if E::IS_DYN_RELA {
@@ -125,6 +131,8 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut define: impl FnMut(u32, u64))
                 ctx.gotplt.shdr.sh_addr.get() + crate::chunks::gotplt::header_size::<E>(),
             );
         }
+    } else if E::FAMILY == Family::Mips {
+        define(DT_PLTGOT, ctx.got.hdr.shdr.sh_addr.get());
     } else if ctx.gotplt.shdr.sh_size.get() != 0 {
         define(DT_PLTGOT, ctx.gotplt.shdr.sh_addr.get());
     }
@@ -190,7 +198,8 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut define: impl FnMut(u32, u64))
     if ctx.args.pie {
         flags1 |= DF_1_PIE;
     }
-    if ctx.args.z_now {
+    // MIPS PLT entries don't support lazy binding; see arch/mips.rs.
+    if ctx.args.z_now || (E::FAMILY == Family::Mips && !ctx.plt.symbols.is_empty()) {
         flags |= DF_BIND_NOW;
         flags1 |= DF_1_NOW;
     }
@@ -219,7 +228,7 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut define: impl FnMut(u32, u64))
     if ctx.args.z_interpose {
         flags1 |= DF_1_INTERPOSE;
     }
-    if !ctx.got.gottp_syms.is_empty() {
+    if !ctx.got.gottp_syms.is_empty() || ctx.mips_got.as_ref().is_some_and(|got| got.has_gottp()) {
         flags |= DF_STATIC_TLS;
     }
     if has_textrel {
@@ -253,6 +262,12 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut define: impl FnMut(u32, u64))
         // the first PLT entry. I don't know why it's 32 bytes off, but
         // it is what it is.
         define(DT_PPC64_GLINK, plt.hdr.shdr.sh_addr.get() + E::plt_entry_offset(ctx, 0) - 32);
+    }
+
+    if E::FAMILY == Family::Mips {
+        let addr = ctx.dynamic.as_ref().map_or(0, |d| d.shdr.sh_addr.get());
+        let entry_addr = addr + count.get() * size_of::<ElfDyn<E>>() as u64;
+        crate::arch::mips::dynamic_tags(ctx, entry_addr, &mut define);
     }
 
     // GDB needs a DT_DEBUG entry in an executable to store word-size data

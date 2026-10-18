@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# MIPS DSOs have no .rel.plt.
+[[ $MACHINE = mips* ]] && skip
+
 
 # glibc 2.22 or prior have a bug that ld-linux.so.2 crashes on dlopen()
 # if .rela.dyn and .rela.plt are not contiguous in a given DSO.

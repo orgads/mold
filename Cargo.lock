@@ -272,6 +272,10 @@ dependencies = [
  "mold-elf-loongarch32",
  "mold-elf-loongarch64",
  "mold-elf-m68k",
+ "mold-elf-mips32be",
+ "mold-elf-mips32le",
+ "mold-elf-mips64be",
+ "mold-elf-mips64le",
  "mold-elf-ppc32",
  "mold-elf-ppc64v1",
  "mold-elf-ppc64v2",
@@ -380,6 +384,34 @@ dependencies = [
 
 [[package]]
 name = "mold-elf-m68k"
+version = "3.0.0"
+dependencies = [
+ "mold-elf",
+]
+
+[[package]]
+name = "mold-elf-mips32be"
+version = "3.0.0"
+dependencies = [
+ "mold-elf",
+]
+
+[[package]]
+name = "mold-elf-mips32le"
+version = "3.0.0"
+dependencies = [
+ "mold-elf",
+]
+
+[[package]]
+name = "mold-elf-mips64be"
+version = "3.0.0"
+dependencies = [
+ "mold-elf",
+]
+
+[[package]]
+name = "mold-elf-mips64le"
 version = "3.0.0"
 dependencies = [
  "mold-elf",

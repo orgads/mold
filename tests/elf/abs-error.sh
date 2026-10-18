@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# GCC for N64 emits GOT-relative code even with -fno-PIC.
+[[ $MACHINE = mips64* ]] && skip
+
 [ $MACHINE = aarch64 ] && skip
 [ $MACHINE = ppc64 ] && skip
 [ $MACHINE = ppc64le ] && skip

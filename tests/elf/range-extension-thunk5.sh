@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# One file calls more functions than a MIPS GOT can hold without -mxgot.
+[[ $MACHINE = mips* ]] && skip
+
 [ $MACHINE = sh4 ] && skip
 
 # Regression test for https://github.com/rui314/mold/issues/1538.

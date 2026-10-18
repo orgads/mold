@@ -1,5 +1,5 @@
 # The ELF linker in elf/ is generic over the target. Instantiating it for
-# all twenty targets in one crate keeps the compiler on a single core for
+# all twenty-four targets in one crate keeps the compiler on a single core for
 # minutes, so each target is instantiated in a crate of its own under
 # arch/, and the executable in cli/ dispatches to them.
 [workspace]
@@ -40,6 +40,10 @@ mold-elf-sh4 = { path = "arch/elf-sh4", version = "=3.0.0" }
 mold-elf-sh4be = { path = "arch/elf-sh4be", version = "=3.0.0" }
 mold-elf-loongarch64 = { path = "arch/elf-loongarch64", version = "=3.0.0" }
 mold-elf-loongarch32 = { path = "arch/elf-loongarch32", version = "=3.0.0" }
+mold-elf-mips64be = { path = "arch/elf-mips64be", version = "=3.0.0" }
+mold-elf-mips64le = { path = "arch/elf-mips64le", version = "=3.0.0" }
+mold-elf-mips32be = { path = "arch/elf-mips32be", version = "=3.0.0" }
+mold-elf-mips32le = { path = "arch/elf-mips32le", version = "=3.0.0" }
 mold-macho = { path = "macho", version = "=3.0.0" }
 mold-macho-arm64 = { path = "arch/macho-arm64", version = "=3.0.0" }
 mold-macho-x86_64 = { path = "arch/macho-x86_64", version = "=3.0.0" }

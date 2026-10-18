@@ -20,6 +20,9 @@ fn should_keep<E: Target>(file: &ObjectFile<E>, isec: &InputSection<E>) -> bool 
     if E::FAMILY == Family::Ppc32 && name == b".got2" {
         return true;
     }
+    if E::FAMILY == Family::Mips && ty == SHT_MIPS_ABIFLAGS {
+        return true;
+    }
     flags & SHF_GNU_RETAIN != 0
         || matches!(ty, SHT_NOTE | SHT_INIT_ARRAY | SHT_FINI_ARRAY | SHT_PREINIT_ARRAY)
         || name.starts_with(b".ctors")
@@ -91,12 +94,17 @@ fn collect_root_set<'a, E: Target>(ctx: &'a Context<E>) -> Vec<&'a InputSection<
             // reduce the amount of non-memory-mapped segments, you should
             // use the `strip` command, compile without debug info or use
             // the --strip-all linker option.
+            //
+            // The exception is MIPS .pdr, which nothing refers to. GNU ld
+            // collects it, and so do we.
             for isec in file.input_sections() {
                 if !isec.is_alive() {
                     continue;
                 }
                 if !isec.is_alloc() {
-                    isec.set_visited();
+                    if E::FAMILY != Family::Mips || isec.name(file) != b".pdr" {
+                        isec.set_visited();
+                    }
                     continue;
                 }
                 if should_keep::<E>(file, isec) && mark_section(isec) {

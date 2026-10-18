@@ -1468,6 +1468,14 @@ pub fn add_synthetic_symbols<E: Target>(ctx: &mut Context<E>) {
     if E::FAMILY == Family::Ppc32 {
         s(ctx, "_SDA_BASE_");
     }
+    if E::FAMILY == Family::Mips {
+        // _gp is the GP value of the first GOT. _gp_disp and
+        // __gnu_local_gp refer to the GP value of the GOT of the
+        // referencing file, so relocations against them are special.
+        ctx.syms.mips_gp = Some(s(ctx, "_gp"));
+        ctx.syms.mips_gp_disp = Some(s(ctx, "_gp_disp"));
+        ctx.syms.mips_gnu_local_gp = Some(s(ctx, "__gnu_local_gp"));
+    }
     if E::IS_SPARC {
         // TLS_GD_CALL and TLS_LDM_CALL relocations call it implicitly.
         ctx.syms.tls_get_addr = Some(ctx.get_symbol(b"__tls_get_addr"));
@@ -2179,8 +2187,11 @@ pub fn check_symbol_types<E: Target>(ctx: &Context<E>) {
     ctx.objs.par_iter().for_each(|file| {
         let id = FileId::Obj(file.id());
         for i in file.base.first_global..file.base.elf_syms.len() {
-            let st_type = file.base.elf_syms[i].st_type();
-            if st_type == STT_NOTYPE {
+            let esym = &file.base.elf_syms[i];
+            let st_type = esym.st_type();
+            // GCC for MIPS declares the library functions it calls, such
+            // as memmove, as STT_OBJECT.
+            if st_type == STT_NOTYPE || (E::IS_MIPS && esym.is_undef()) {
                 continue;
             }
             let sym = &ctx.symbols[file.base.symbols[i]];
@@ -2836,6 +2847,8 @@ pub fn scan_relocations<E: Target>(ctx: &mut Context<E>) {
         }
         ctx.symbols[id].clear_flags();
     }
+
+    E::after_scan_relocations(ctx);
 
     if ctx.has_textrel.load(Ordering::Relaxed) && ctx.args.warn_textrel {
         warn!("creating a DT_TEXTREL in an output file");
@@ -3564,6 +3577,19 @@ fn sort_output_sections_regular<E: Target>(ctx: &mut Context<E>) {
         if hdr.shdr.sh_type.get() == SHT_NOTE {
             return -(hdr.shdr.sh_addralign.get() as i64);
         }
+        // MIPS code reaches small data with a signed 16-bit offset from the
+        // GP value of the primary GOT, so they follow .got.
+        if E::IS_MIPS {
+            match id {
+                ChunkId::Got => return 10,
+                ChunkId::Copyrel => return -1,
+                _ if hdr.name == b".sdata" || hdr.name == b".lit4" || hdr.name == b".lit8" => {
+                    return 11;
+                }
+                _ if hdr.name == b".sbss" => return -2,
+                _ => {}
+            }
+        }
         match id {
             ChunkId::Got => 2,
             _ if hdr.name == b".toc" => 3,
@@ -4209,6 +4235,14 @@ pub fn fix_synthetic_symbols<E: Target>(ctx: &mut Context<E>) {
         match find(ctx, b".sdata") {
             Some(c) => start(ctx, Some(sym), Some(c), 0x800),
             None => start(ctx, Some(sym), first, 0),
+        }
+    }
+    // MIPS' _gp, _gp_disp and __gnu_local_gp
+    if let Some(got) = &ctx.mips_got {
+        let gp = got.gp(ctx, 0);
+        let syms = [ctx.syms.mips_gp, ctx.syms.mips_gp_disp, ctx.syms.mips_gnu_local_gp];
+        for sym in syms.into_iter().flatten() {
+            ctx.set_symbol_output_chunk(sym, ChunkId::Got).value = gp;
         }
     }
     // ARM32's __exidx_{start,end}

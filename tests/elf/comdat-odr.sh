@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# The N32 tests use Clang under the name of GCC.
+$GXX --version | grep -q clang && skip
+
 # ppc64v1 reports a bad .opd relocation before reaching this error.
 [ $MACHINE = ppc64 ] && skip
 command -v $GXX >& /dev/null || skip

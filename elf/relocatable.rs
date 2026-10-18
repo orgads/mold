@@ -138,8 +138,10 @@ fn create_comdat_group_sections<E: Target>(ctx: &mut Context<E>) {
             for j in file.group_members(sect_idx) {
                 let shdr = &file.base.shdrs[j as usize];
                 let sh_type = shdr.sh_type.get();
-                let is_reloc =
-                    sh_type == if E::IS_RELA { SHT_RELA } else { SHT_REL } || sh_type == SHT_CREL;
+                // MIPS O32 object files use REL, which we convert to RELA.
+                let is_reloc = sh_type == if E::IS_RELA { SHT_RELA } else { SHT_REL }
+                    || sh_type == SHT_CREL
+                    || (E::IS_MIPS && sh_type == SHT_REL);
                 let target = if is_reloc { shdr.sh_info.get() } else { j };
                 let Some(isec) = file.section(target as usize) else {
                     continue;
@@ -213,6 +215,10 @@ fn set_osec_offsets<E: Target>(ctx: &mut Context<E>) -> u64 {
 
 pub fn combine_objects<E: Target>(ctx: &mut Context<E>) {
     passes::merge_gnu_attributes(ctx);
+    // MIPS keeps one .MIPS.abiflags and merges the others into it.
+    if E::FAMILY == Family::Mips {
+        E::rewrite_input_sections(ctx);
+    }
     passes::create_output_sections(ctx);
     split_link_order_sections(ctx);
     create_synthetic_sections(ctx);
@@ -232,6 +238,9 @@ pub fn combine_objects<E: Target>(ctx: &mut Context<E>) {
     let filesize = set_osec_offsets(ctx);
     let mut output = crate::driver::open_output_file(&ctx.args, filesize, 0o666, false);
     crate::driver::copy_chunks(ctx, output.buf());
+    if E::FAMILY == Family::Mips {
+        E::finish_output(ctx, output.buf());
+    }
     output.close();
     mold_common::error::checkpoint();
 

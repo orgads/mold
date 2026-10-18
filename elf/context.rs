@@ -133,6 +133,9 @@ pub struct SyntheticSymbols {
     pub end: Option<SymbolId>,
     pub etext: Option<SymbolId>,
     pub toc: Option<SymbolId>,
+    pub mips_gp: Option<SymbolId>,
+    pub mips_gp_disp: Option<SymbolId>,
+    pub mips_gnu_local_gp: Option<SymbolId>,
     pub tls_get_addr: Option<SymbolId>,
 
     /// The entry point, `-init` and `-fini` symbols.
@@ -242,6 +245,7 @@ pub struct Context<E: Target> {
     pub arm_exidx: Option<crate::chunks::arm_exidx::ArmExidxSection<E>>,
     pub ppc64_save_restore: Option<ChunkHeader<E>>,
     pub ppc64_opd: Option<crate::chunks::opd::Ppc64OpdSection<E>>,
+    pub mips_got: Option<crate::arch::mips::MipsGot>,
     /// Whether any input uses Power10 PC-relative calls, which decides
     /// how thunks address their targets.
     pub is_power10: AtomicBool,
@@ -346,6 +350,7 @@ impl<E: Target> Context<E> {
             arm_exidx: None,
             ppc64_save_restore: None,
             ppc64_opd: None,
+            mips_got: None,
             is_power10: AtomicBool::new(false),
             gdb_index: None,
             gdb_index_data: None,

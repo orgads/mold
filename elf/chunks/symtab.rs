@@ -271,6 +271,11 @@ pub fn to_output_esym<E: Target>(ctx: &Context<E>, sym: &Symbol, st_name: u32) -
         esym.set_st_size(0);
         if sym.is_canonical() {
             esym.set_st_value(sym.plt_addr(ctx));
+            // MIPS dynamic linkers resolve references to an undefined
+            // symbol with a non-zero value only if this bit is set.
+            if E::FAMILY == Family::Mips {
+                esym.set_mips_plt(true);
+            }
         }
     } else {
         match origin {

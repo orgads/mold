@@ -12,6 +12,7 @@ pub mod arm64;
 pub mod i386;
 pub mod loongarch;
 pub mod m68k;
+pub mod mips;
 pub mod ppc32;
 pub mod ppc64v1;
 pub mod ppc64v2;
@@ -26,6 +27,7 @@ pub use arm64::{Arm64, Arm64Be};
 pub use i386::I386;
 pub use loongarch::{LoongArch32, LoongArch64};
 pub use m68k::M68k;
+pub use mips::{Mips32Be, Mips32Le, Mips64Be, Mips64Le};
 pub use ppc32::Ppc32;
 pub use ppc64v1::Ppc64V1;
 pub use ppc64v2::Ppc64V2;
@@ -62,6 +64,7 @@ pub enum Family {
     M68k,
     Sh4,
     LoongArch,
+    Mips,
 }
 
 /// Sizes of range extension thunks, for targets whose branch instructions
@@ -158,6 +161,7 @@ pub trait Target: Copy + Default + fmt::Debug + Send + Sync + 'static {
     const IS_SPARC: bool = matches!(Self::FAMILY, Family::Sparc64);
     const IS_RISCV: bool = matches!(Self::FAMILY, Family::RiscV);
     const IS_LOONGARCH: bool = matches!(Self::FAMILY, Family::LoongArch);
+    const IS_MIPS: bool = matches!(Self::FAMILY, Family::Mips);
 
     // The maximum distance of branch instructions used for function calls.
     //
@@ -186,6 +190,9 @@ pub trait Target: Copy + Default + fmt::Debug + Send + Sync + 'static {
             Family::Arm64 => 27,
             Family::Arm32 => 24,
             Family::Ppc32 | Family::Ppc64V1 | Family::Ppc64V2 => 25,
+            // MIPS's J and JAL can reach anywhere within the same 256 MiB
+            // region, which we approximate with a distance.
+            Family::Mips => 27,
             _ => unreachable!("{} has no range extension thunks", Self::NAME),
         };
         (1 << bits) - 32
@@ -202,6 +209,10 @@ pub trait Target: Copy + Default + fmt::Debug + Send + Sync + 'static {
     /// Marks symbols that need target-specific synthetic entries, before
     /// relocations are scanned.
     fn scan_symbols(_ctx: &mut Context<Self>) {}
+
+    /// Creates target-specific synthetic entries once relocations are
+    /// scanned. MIPS assigns GOTs to input files here.
+    fn after_scan_relocations(_ctx: &mut Context<Self>) {}
 
     /// Machine-specific `e_flags` of the output file.
     fn eflags(_ctx: &Context<Self>) -> u32 {
@@ -249,9 +260,9 @@ pub trait Target: Copy + Default + fmt::Debug + Send + Sync + 'static {
     /// Applies relocations to a copy of a non-allocated section's contents.
     fn apply_reloc_nonalloc(ctx: &Context<Self>, isec: &InputSection<Self>, buf: &mut [u8]);
 
-    /// Whether a call from `isec` must go through a thunk however close its
-    /// target is: a processor mode switch on ARM32, or TOC setup on
-    /// PowerPC.
+    /// Whether a call must go through a thunk however close its target
+    /// is: a processor mode switch on ARM32, TOC setup on PowerPC, or
+    /// setting up the callee address register on MIPS.
     fn always_needs_thunk(
         _ctx: &Context<Self>,
         _isec: &InputSection<Self>,
@@ -375,6 +386,10 @@ pub fn emulation_to_target(emulation: &str) -> Option<&'static str> {
         "shelf" | "shelf_linux" => "sh4be",
         "elf64loongarch" => "loongarch64",
         "elf32loongarch" => "loongarch32",
+        "elf64btsmip" => "mips64be",
+        "elf64ltsmip" => "mips64le",
+        "elf32btsmip" | "elf32btsmipn32" => "mips32be",
+        "elf32ltsmip" | "elf32ltsmipn32" => "mips32le",
         _ => return None,
     })
 }

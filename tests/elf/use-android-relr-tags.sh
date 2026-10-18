@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# MIPS doesn't support RELR.
+[[ $MACHINE = mips* ]] && skip
+
 cat <<EOF | $CC -o $t/a.o -fPIC -c -xc -
 #include <stdio.h>
 int main() {

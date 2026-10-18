@@ -69,6 +69,14 @@ const ELF_TARGETS: &[(&str, LinkFn)] = &[
     ("loongarch64", mold_elf_loongarch64::link),
     #[cfg(feature = "loongarch32")]
     ("loongarch32", mold_elf_loongarch32::link),
+    #[cfg(feature = "mips64be")]
+    ("mips64be", mold_elf_mips64be::link),
+    #[cfg(feature = "mips64le")]
+    ("mips64le", mold_elf_mips64le::link),
+    #[cfg(feature = "mips32be")]
+    ("mips32be", mold_elf_mips32be::link),
+    #[cfg(feature = "mips32le")]
+    ("mips32le", mold_elf_mips32le::link),
 ];
 
 const MACHO_TARGETS: &[(&str, MachoLinkFn)] = &[

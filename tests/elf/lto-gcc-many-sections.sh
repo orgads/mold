@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# The N32 tests use Clang under the name of GCC.
+$GCC --version | grep -q clang && skip
+
 # An object file with 65280 or more sections uses the extended section
 # numbering, in which e_shnum is zero and the actual number of sections
 # is stored in the sh_size field of the first section header. Append

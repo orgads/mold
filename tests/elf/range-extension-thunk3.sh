@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 . $(dirname $0)/common.inc
 
+# One file calls more functions than a MIPS GOT can hold without -mxgot.
+[[ $MACHINE = mips* ]] && skip
+
 [ $MACHINE = sh4 ] && skip
 
 seq 1    1000  | sed 's/.*/void func&() {}/' > $t/a0.c

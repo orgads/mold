@@ -13,7 +13,7 @@ use mold_common::siphash::SipHash13_128;
 use mold_common::{error, fatal};
 use rayon::prelude::*;
 
-use crate::arch::Target;
+use crate::arch::{Family, Target};
 use crate::chunks::ChunkHeader;
 use crate::chunks::eh_frame_hdr::EhFrameHdrSection;
 use crate::context::Context;
@@ -192,6 +192,9 @@ pub fn copy_buf<E: Target>(ctx: &Context<E>, buf: &mut [u8], hdr_buf: Option<&mu
         dst[..contents.len()].copy_from_slice(contents);
         if ctx.args.relocatable {
             return;
+        }
+        if E::FAMILY == Family::Mips {
+            crate::arch::mips::rewrite_cie::<E>(&mut dst[..contents.len()]);
         }
         for rel in cie.rels(file) {
             let sym = &ctx.symbols[file.base.symbols[rel.r_sym() as usize]];

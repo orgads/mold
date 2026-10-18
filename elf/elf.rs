@@ -313,6 +313,7 @@ pub trait SymbolRecord: FileRecord + fmt::Debug {
     fn set_riscv_variant_cc(&mut self, value: bool);
     fn ppc64_local_entry(&self) -> u8;
     fn set_ppc64_local_entry(&mut self, value: u8);
+    fn set_mips_plt(&mut self, value: bool);
 
     #[inline]
     fn is_undef(&self) -> bool {
@@ -389,6 +390,10 @@ macro_rules! impl_symbol_record {
 
             fn set_riscv_variant_cc(&mut self, v: bool) {
                 self.st_other = (self.st_other & !0x80) | (u8::from(v) << 7);
+            }
+
+            fn set_mips_plt(&mut self, v: bool) {
+                self.st_other = (self.st_other & !(STO_MIPS_PLT as u8)) | (u8::from(v) << 3);
             }
 
             fn set_ppc64_local_entry(&mut self, v: u8) {
