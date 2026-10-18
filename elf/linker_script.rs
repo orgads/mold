@@ -275,6 +275,66 @@ impl<'a, E: Target> Script<'a, E> {
         }
     }
 
+    /// Reads a SECTIONS command. mold always uses its own section layout,
+    /// which follows GNU ld's default linker script, so we accept only
+    /// scripts that are a default script with a different base address,
+    /// which is what scripts that come with toolchains and products
+    /// usually are. We take the base address and ignore the rest. Commands
+    /// that place sections at specific addresses or in memory regions are
+    /// rejected.
+    fn read_sections<'t>(&mut self, tok: &'t [&'static [u8]]) -> &'t [&'static [u8]] {
+        let mut tok = self.skip(tok, "{");
+        let mut depth = 1;
+        let mut seen_base = false;
+
+        while depth > 0 {
+            let Some(&t) = tok.first() else {
+                fatal!("{}: expected '}}', but got EOF", self.mf.name.display());
+            };
+            match t {
+                b"{" => depth += 1,
+                b"}" => depth -= 1,
+                b">" | b"AT" | b"AT>" => self.error(t, "unsupported: placement of a section"),
+                _ if depth == 1 && tok.get(1) == Some(&b":".as_slice()) && is_number(t) => {
+                    if parse_number(t) != Some(0) {
+                        self.error(t, "unsupported: address of an output section");
+                    }
+                }
+                // `. = <expr>;` sets the location counter. The first one
+                // that skips the headers sets the base address.
+                b"." if depth == 1 && tok.get(1) == Some(&b"=".as_slice()) => {
+                    let end = tok.iter().position(|t| *t == b";").unwrap_or(tok.len());
+                    let expr = &tok[2..end];
+                    let num =
+                        expr.iter().flat_map(|t| t.split(|&b| b == b'+')).find_map(parse_number);
+                    if !seen_base && expr.iter().any(|t| t.ends_with(b"SIZEOF_HEADERS")) {
+                        seen_base = true;
+                        if let Some(base) = num
+                            && !self.ctx.args.image_base_is_set
+                        {
+                            if base % self.ctx.args.page_size != 0 {
+                                self.error(
+                                    t,
+                                    "the base address is not a multiple of the page size",
+                                );
+                            }
+                            self.ctx.args.image_base = base;
+                        }
+                    } else if let [t] = expr
+                        && is_number(t)
+                    {
+                        self.error(t, "unsupported: assignment of an address to `.'");
+                    }
+                    tok = &tok[end..];
+                    continue;
+                }
+                _ => {}
+            }
+            tok = &tok[1..];
+        }
+        tok
+    }
+
     fn read_group<'t>(&mut self, mut tok: &'t [&'static [u8]]) -> &'t [&'static [u8]] {
         tok = self.skip(tok, "(");
 
@@ -311,6 +371,17 @@ impl<'a, E: Target> Script<'a, E> {
                 tok = self.read_output_format(&tok[1..]);
             } else if t == b"INPUT" || t == b"GROUP" {
                 tok = self.read_group(&tok[1..]);
+            } else if t == b"OUTPUT_ARCH" || t == b"SEARCH_DIR" {
+                // ponytail: libraries are looked up before linker scripts
+                // are read, so SEARCH_DIR has no effect.
+                tok = self.read_output_format(&tok[1..]);
+            } else if let [b"ENTRY", b"(", name, b")", rest @ ..] = tok {
+                if !self.ctx.args.entry_is_set {
+                    self.ctx.args.entry = unquote(name).to_vec();
+                }
+                tok = rest;
+            } else if t == b"SECTIONS" {
+                tok = self.read_sections(&tok[1..]);
             } else if t == b"VERSION" {
                 tok = self.skip(&tok[1..], "{");
                 tok = self.read_version_script(tok);
@@ -503,6 +574,19 @@ impl<'a, E: Target> Script<'a, E> {
 }
 
 /// Matches a `global:` or `local:` label.
+fn is_number(tok: &[u8]) -> bool {
+    tok.first().is_some_and(u8::is_ascii_digit)
+}
+
+/// Parses a decimal or hexadecimal number.
+fn parse_number(tok: &[u8]) -> Option<u64> {
+    let s = std::str::from_utf8(tok).ok()?;
+    match s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        Some(hex) => u64::from_str_radix(hex, 16).ok(),
+        None => s.parse().ok(),
+    }
+}
+
 fn read_label<'t>(tok: &'t [&'static [u8]], label: &[u8]) -> Option<&'t [&'static [u8]]> {
     match tok {
         [first, rest @ ..] if first.strip_suffix(b":") == Some(label) => Some(rest),

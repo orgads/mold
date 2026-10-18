@@ -456,6 +456,8 @@ pub struct Args {
     pub z_separate_code: SeparateCodeKind,
     pub shuffle_sections: ShuffleSections,
     pub entry: Vec<u8>,
+    /// Whether -e is given, which overrides a linker script's ENTRY.
+    pub entry_is_set: bool,
     pub fini: Vec<u8>,
     pub init: Vec<u8>,
     pub unresolved_symbols: UnresolvedKind,
@@ -580,6 +582,9 @@ pub struct Args {
     pub trace_symbol: Vec<Vec<u8>>,
     pub z_x86_64_isa_level: u32,
     pub image_base: u64,
+    /// Whether --image-base or -Ttext-segment is given, which overrides
+    /// the base address in a linker script.
+    pub image_base_is_set: bool,
     pub page_size: u64,
 
     /// Whether an existing output file may be overwritten in place.
@@ -601,6 +606,7 @@ impl Default for Args {
             z_separate_code: SeparateCodeKind::NoSeparateCode,
             shuffle_sections: ShuffleSections::None,
             entry: b"_start".to_vec(),
+            entry_is_set: false,
             fini: b"_fini".to_vec(),
             init: b"_init".to_vec(),
             unresolved_symbols: UnresolvedKind::Ignore,
@@ -724,6 +730,7 @@ impl Default for Args {
             trace_symbol: Vec::new(),
             z_x86_64_isa_level: 0,
             image_base: 0x200000,
+            image_base_is_set: false,
             page_size: 0,
             overwrite_output_file: false,
         }
@@ -1550,6 +1557,7 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
             a.section_start.insert(b".text".to_vec(), parse_hex("Ttext", arg));
         } else if read_arg!("Ttext-segment") {
             a.ttext_segment = Some(parse_number("Ttext-segment", arg) as u64);
+            a.image_base_is_set = true;
         } else if cursor.read_flag("repro") {
             a.repro = true;
         } else if let Some(value) = cursor.read_z_switch("now", "lazy") {
@@ -1722,6 +1730,7 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
             a.ignore_data_address_equality = true;
         } else if read_arg!("image-base") {
             a.image_base = parse_number("image-base", arg) as u64;
+            a.image_base_is_set = true;
         } else if read_arg!("physical-image-base") {
             a.physical_image_base = Some(parse_number("physical-image-base", arg) as u64);
         } else if cursor.read_flag("print-icf-sections") {
@@ -1882,6 +1891,7 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
             a.dynamic_list.push(DynamicListSource::File(mf));
         } else if read_arg!("entry", true) || read_arg!("e", true) {
             a.entry = raw_arg.as_encoded_bytes().to_vec();
+            a.entry_is_set = true;
         } else if let Some(value) = cursor.read_switch("as-needed", "no-as-needed") {
             rctx.as_needed = value;
         } else if let Some(value) = cursor.read_switch("whole-archive", "no-whole-archive") {
