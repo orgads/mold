@@ -4072,8 +4072,10 @@ pub fn fix_synthetic_symbols<E: Target>(ctx: &mut Context<E>) {
     let got = if E::IS_X86 { ChunkId::GotPlt } else { ChunkId::Got };
     start(ctx, ctx.syms.global_offset_table, Some(got), 0);
 
-    // _PROCEDURE_LINKAGE_TABLE_. We need this on SPARC.
-    start(ctx, ctx.syms.procedure_linkage_table, Some(ChunkId::Plt), 0);
+    // _PROCEDURE_LINKAGE_TABLE_. We need this on SPARC. Without a .plt,
+    // binding it to the PLT would leave it undefined in .symtab.
+    let plt = ctx.chunks.contains(&ChunkId::Plt).then_some(ChunkId::Plt);
+    start(ctx, ctx.syms.procedure_linkage_table, plt, 0);
 
     // _TLS_MODULE_BASE_. This symbol is used to obtain the address of
     // the TLS block in the TLSDESC model. I believe GCC and Clang don't
