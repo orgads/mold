@@ -427,7 +427,7 @@ const SHARES_DYNSYM: u16 = 1 << 9;
 
 // For --gc-sections. True if a live section refers to this DSO or
 // undefined symbol.
-const GC_REFERENCED: u16 = 1 << 9;
+const GC_REFERENCED: u16 = 1 << 15;
 
 // For --gc-sections
 const GC_ROOT: u16 = 1 << 10;
@@ -450,6 +450,15 @@ const RUST: u16 = 1 << 14;
 /// Defines a getter and a setter for each of the packed attributes.
 macro_rules! symbol_bits {
     ($($get:ident, $set:ident: $bit:ident;)*) => {
+        // Each attribute needs a bit of its own.
+        const _: () = {
+            let mut all = 0u16;
+            $(
+                assert!(all & $bit == 0, concat!(stringify!($bit), " shares a bit with another attribute"));
+                all |= $bit;
+            )*
+        };
+
         impl Symbol {
             $(
                 #[inline]
