@@ -446,6 +446,15 @@ const RUST: u16 = 1 << 14;
 /// Defines a getter and a setter for each of the packed attributes.
 macro_rules! symbol_bits {
     ($($get:ident, $set:ident: $bit:ident;)*) => {
+        // Each attribute needs a bit of its own.
+        const _: () = {
+            let mut all = 0u16;
+            $(
+                assert!(all & $bit == 0, concat!(stringify!($bit), " shares a bit with another attribute"));
+                all |= $bit;
+            )*
+        };
+
         impl Symbol {
             $(
                 #[inline]
