@@ -254,6 +254,13 @@ fn for_each_entry<E: Target>(ctx: &Context<E>, mut define_entry: impl FnMut(u32,
     if E::IS_RISCV && plt.symbols.iter().any(|&id| ctx.symbols[id].esym(ctx).riscv_variant_cc()) {
         define(DT_RISCV_VARIANT_CC, 0);
     }
+    // -z mark-plt tells glibc where the PLT is so that it can rewrite PLT
+    // entries into direct branches (glibc.cpu.plt_rewrite).
+    if ctx.args.z_mark_plt && plt.hdr.shdr.sh_size.get() != 0 {
+        define(DT_X86_64_PLT, plt.hdr.shdr.sh_addr.get());
+        define(DT_X86_64_PLTSZ, plt.hdr.shdr.sh_size.get());
+        define(DT_X86_64_PLTENT, 16);
+    }
     if E::FAMILY == Family::Ppc32 {
         define(DT_PPC_GOT, ctx.gotplt.shdr.sh_addr.get());
     }

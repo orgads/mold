@@ -915,6 +915,15 @@ point symbol in a script.
   Generate an Intel Indirect Branch Tracking (IBT)-enabled PLT. This is the
   default on x86-64.
 
+* `-z mark-plt`, `-z nomark-plt`:
+  Add `DT_X86_64_PLT`, `DT_X86_64_PLTSZ` and `DT_X86_64_PLTENT` dynamic tags
+  and store each PLT entry's address in the `r_addend` of its
+  `R_X86_64_JUMP_SLOT` relocation, so that glibc can rewrite PLT entries
+  into direct branches when its `glibc.cpu.plt_rewrite` tunable is set. The
+  output does not work with a dynamic linker that does not ignore the
+  `r_addend` of `R_X86_64_JUMP_SLOT`, such as older versions of glibc.
+  `-z nomark-plt` restores the default. Ignored except on x86-64.
+
 * `-z execstack`, `-z noexecstack`:
   By default, the pages for the stack area (i.e. the pages where local
   variables reside) are not executable for security reasons. `-z execstack`

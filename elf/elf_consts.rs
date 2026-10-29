@@ -234,6 +234,9 @@ pub const DT_MIPS_SYMTABNO: u32 = 0x70000011;
 pub const DT_MIPS_GOTSYM: u32 = 0x70000013;
 pub const DT_MIPS_PLTGOT: u32 = 0x70000032;
 pub const DT_MIPS_RLD_MAP_REL: u32 = 0x70000035;
+pub const DT_X86_64_PLT: u32 = 0x70000000;
+pub const DT_X86_64_PLTSZ: u32 = 0x70000001;
+pub const DT_X86_64_PLTENT: u32 = 0x70000003;
 pub const DT_AUXILIARY: u32 = 0x7ffffffd;
 pub const DT_FILTER: u32 = 0x7fffffff;
 

@@ -60,11 +60,18 @@ pub fn copy_buf<E: Target>(ctx: &Context<E>, buf: &mut [u8]) {
                 )
             }
         } else {
+            // With -z mark-plt, the addend is where glibc writes a direct
+            // branch over the PLT entry, which is past an endbr64 if any.
+            let addend = if ctx.args.z_mark_plt {
+                sym.plt_addr(ctx) as i64 + if sym.is_canonical() { 4 } else { 0 }
+            } else {
+                0
+            };
             DynRel::<E>::new(
                 sym.gotplt_addr(ctx),
                 E::R_JUMP_SLOT,
                 sym.dynsym_idx(&ctx.symbols).unwrap_or(0),
-                0,
+                addend,
             )
         };
         out[i] = rel;

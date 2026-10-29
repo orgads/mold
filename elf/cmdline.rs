@@ -524,6 +524,7 @@ pub struct Args {
     pub z_initfirst: bool,
     pub z_interpose: bool,
     pub z_keep_text_section_prefix: bool,
+    pub z_mark_plt: bool,
     pub z_nodefaultlib: bool,
     pub z_now: bool,
     pub z_origin: bool,
@@ -673,6 +674,7 @@ impl Default for Args {
             z_initfirst: false,
             z_interpose: false,
             z_keep_text_section_prefix: false,
+            z_mark_plt: false,
             z_nodefaultlib: false,
             z_now: false,
             z_origin: false,
@@ -1689,6 +1691,12 @@ pub fn parse_args(target: &TargetTraits, raw_cmdline: &[Cow<'_, OsStr>]) -> Pars
             a.z_rewrite_endbr = true;
         } else if cursor.read_z_flag("norewrite-endbr") {
             a.z_rewrite_endbr = false;
+        } else if let Some(value) = cursor.read_z_switch("mark-plt", "nomark-plt") {
+            // GNU ld's wording, which glibc's configure looks for
+            if value && target.family != Family::X86_64 {
+                warn!("-z mark-plt ignored");
+            }
+            a.z_mark_plt = value && target.family == Family::X86_64;
         } else if let Some(value) = cursor.read_switch("nmagic", "no-nmagic") {
             a.nmagic = value;
         } else if cursor.read_flag("n") {
